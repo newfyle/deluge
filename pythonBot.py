@@ -1,7 +1,7 @@
 
 # coding: utf-8
 
-# In[8]:
+# In[39]:
 
 
 import requests
@@ -11,16 +11,18 @@ import time
 import pprint
 import json
 import delugeBot
+import os
+import socket
 
 
-# In[9]:
+# In[2]:
 
 
 api_link="https://api.telegram.org/"
 bot_api="bot578074631:AAFcRCDPl8mzfS0AJ_zwn571cKyC4aCycZ0"
 
 
-# In[10]:
+# In[3]:
 
 
 def call_json(link,method,params={}):
@@ -33,7 +35,7 @@ def call_session(link,methods,params={}):
     return r
 
 
-# In[11]:
+# In[4]:
 
 
 def countDate():
@@ -44,7 +46,18 @@ def countDate():
     return func
 
 
-# In[12]:
+# In[ ]:
+
+
+def unique_group_id():
+    def func(group_id):
+        func.g_id=group_id
+        return func.g_id
+    func.g_id
+    return func
+
+
+# In[5]:
 
 
 def unique_callback():
@@ -55,7 +68,7 @@ def unique_callback():
     return func
 
 
-# In[13]:
+# In[6]:
 
 
 def download(link):
@@ -63,7 +76,65 @@ def download(link):
     wget.download(''.join(command))
 
 
-# In[14]:
+# In[38]:
+
+
+class ipList:
+    def __init__(self,list_ipfile):
+        self.list=self.load_file(list_ipfile)
+    def load_file(self,ip_file):
+        data={}
+        try:
+            with open(ip_file,"r") as f:
+                data_encrypted=f.readlines()
+                for a in data_encrypted:
+                    split_data=a.split("\\s")
+                    data_split_decrypted={base64.b64decode(split_data[0]):base64.b64decode(split_data[1])}
+                    data.update(data_split_decrypted)
+            print("Data has been properly loaded.")
+            return data
+        except Exception as e:
+            print(e)
+            print("Data has not been properly loaded.")
+            open(ip_file,'a').close()
+            return data
+    def save_file(self,ip_file):
+        if(os.path.exists(ip_file)):
+            os.remove(ip_file)
+            print("File has been deleted for new save.")
+        else:
+            print("File does not exist, proceed with saving.")
+        with open(ip_file,"w") as f:
+            try:
+                for a in self.list.items():
+                    string_save_encoded=base64.b64encode(a[0])+"  "+base64.b64encode(a[1])
+                    f.write(string_save_encoded)
+            except Exception as e:
+                print("Data list is empty")
+    def insert_to_list(self,username_ip):
+        if(username_ip[0] not in self.list):
+            self.list.update({username_ip[0]:username_ip[1]})
+        print(username_ip)
+    def delete_from_list(self,username):
+        try:
+            del self.list[username]
+            print(username+" deleted")
+        except Exception as e:
+            print("No user id listed")
+    def return_ip(self,username):
+        return self.list.get(username)
+    def return_list(self):
+        return self.list
+    def clear_file(self,ip_file):
+        if(os.path.exists(ip_file)):
+            os.remove(ip_file)
+        self.list={}
+    
+    
+class_list=ipList("saved_user_lists")
+
+
+# In[7]:
 
 
 def request_getter():
@@ -74,7 +145,7 @@ def request_getter():
     return func
 
 
-# In[21]:
+# In[14]:
 
 
 date_check=countDate()
@@ -100,8 +171,6 @@ while True:
                     send_message_buttons("Do you want to download torrent "+file_name+"?",a.get("message").get('chat')['id'],torrent_buttons)
                 except Exception as e:
                     pprint.PrettyPrinter(indent=1).pprint(r.json())
-                    
-                    
                 try:
                     query=a.get('callback_query')['id']
                     if(query!=unique_cb.id):
@@ -113,11 +182,22 @@ while True:
                     #put function here in order to call downloads
                 except Exception as e:
                     pprint.PrettyPrinter(indent=1).pprint(r.json())
+                    
+                try:
+                    String[] split=a[text].split("\\s")
+                    if(split[0]=="/register"):
+                        username_ip_parsed=[a.get('from')['id'],split[1]]
+                        if(verify_ip_address(split[1])):
+                            class_list.insert_to_list(username_ip_parsed)
+                            
+                            
+                        
+                        
     else:
         thread.sleep(3000)
 
 
-# In[15]:
+# In[8]:
 
 
 def endswithdownload(file_id,name_file,array_of_item):
@@ -129,13 +209,13 @@ def endswithdownload(file_id,name_file,array_of_item):
         print("Not determined file")
 
 
-# In[16]:
+# In[9]:
 
 
 #figure out how to send a message in python with inlines
 
 
-# In[17]:
+# In[10]:
 
 
 id_group=-254621867
@@ -147,7 +227,7 @@ def send_message(text,group_id):
 send_message("Rob",id_group)
 
 
-# In[18]:
+# In[11]:
 
 
 keyboard_button=[]
@@ -162,7 +242,7 @@ def send_message_buttons(text,group_id,query_buttons):
     print(jsona)
 
 
-# In[19]:
+# In[12]:
 
 
 def download_torrent(file_name,group_id_download):
@@ -171,7 +251,7 @@ def download_torrent(file_name,group_id_download):
     returned_get_result=call_json(api_link+bot_api,"sendMessage",params)
 
 
-# In[ ]:
+# In[13]:
 
 
 def make_magnet_from_file(file) :
@@ -181,4 +261,15 @@ def make_magnet_from_file(file) :
     digest = hashlib.sha1(hashcontents).digest()
     b32hash = base64.b32encode(digest).decode()
     return 'magnet:?'             + 'xt=urn:btih:' + b32hash             + '&dn=' + metadata[b'info'][b'name'].decode()             + '&tr=' + metadata[b'announce'].decode()+ '&xl=' + str(metadata[b'info'][b'length'])
+
+
+# In[40]:
+
+
+def verify_ip_address(ip_address):
+    try:
+        socket.inet_aton(addr)
+        return true
+    except socket.error:
+        return false
 
