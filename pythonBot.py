@@ -1,7 +1,7 @@
 
 # coding: utf-8
 
-# In[1]:
+# In[32]:
 
 
 import requests
@@ -14,13 +14,25 @@ import delugeBot
 import os
 import socket
 from IPy import IP
+import sys
+from OpenSSL import SSL, crypto
+import bcoding, hashlib,urllib
+import io
+import delugeBot
 
 
-# In[2]:
+# In[17]:
+
+
+dir(bcoding)
+
+
+# In[28]:
 
 
 api_link="https://api.telegram.org/"
 bot_api="bot578074631:AAFcRCDPl8mzfS0AJ_zwn571cKyC4aCycZ0"
+reload(sys)
 
 
 # In[3]:
@@ -77,28 +89,28 @@ def download(link):
     wget.download(''.join(command))
 
 
-# In[8]:
+# In[14]:
 
 
 class ipList:
     def __init__(self,list_ipfile):
         self.list=self.load_file(list_ipfile)
     def load_file(self,ip_file):
-        data={}
+        data_lists={}
         try:
             with open(ip_file,"r") as f:
                 data_encrypted=f.readlines()
                 for a in data_encrypted:
                     split_data=a.split("\\s")
                     data_split_decrypted={base64.b64decode(split_data[0]):base64.b64decode(split_data[1])}
-                    data.update(data_split_decrypted)
+                    data_lists.update(data_split_decrypted)
             print("Data has been properly loaded.")
-            return data
+            return data_lists
         except Exception as e:
             print(e)
             print("Data has not been properly loaded.")
             open(ip_file,'a').close()
-            return data
+            return data_lists
     def save_file(self,ip_file):
         if(os.path.exists(ip_file)):
             os.remove(ip_file)
@@ -133,38 +145,6 @@ class ipList:
     
     
 class_list=ipList("saved_user_lists")
-
-
-# In[9]:
-
-
-def encode_dict(dic, encoding='utf-8'):
-    new_dict={}
-
-    for key, value in dic.items():
-
-        new_key=key.encode(encoding)
-
-        if isinstance(value, list):
-            new_dict[new_key]=[]
-            for item in value:
-                if isinstance(item, unicode):
-                    new_dict[new_key].append(item.encode(encoding))
-
-                elif isinstance(item, dict):
-
-                    new_dict[new_key].append(decode_dict(item))
-
-                else:
-                    new_dict[new_key].append(item)
-
-        elif isinstance(value, unicode):
-            new_dict[new_key]=value.encode(encoding)
-
-        elif isinstance(value, dict):
-            new_dict[new_key]=decode_dict(value)
-
-    return new_dict
 
 
 # In[10]:
@@ -232,23 +212,47 @@ def download_torrent(file_name,group_id_download):
     returned_get_result=call_json(api_link+bot_api,"sendMessage",params)
 
 
-# In[16]:
+# In[34]:
 
 
 def make_magnet_from_file(file) :
-    metadata = bencodepy.decode_from_file(file)
+    file_torrent=open(file,"rb")
+    metadata = bcoding.bdecode(file_torrent.read())
     subj = metadata[b'info']
-    hashcontents = bencodepy.encode(subj)
+    hashcontents = bcoding.bencode(subj)
     digest = hashlib.sha1(hashcontents).digest()
     b32hash = base64.b32encode(digest).decode()
-    return 'magnet:?'             + 'xt=urn:btih:' + b32hash             + '&dn=' + metadata[b'info'][b'name'].decode()             + '&tr=' + metadata[b'announce'].decode()+ '&xl=' + str(metadata[b'info'][b'length'])
+    return 'magnet:?'+ 'xt=urn:btih:' + b32hash+ '&dn=' + metadata[b'info'][b'name'].decode()+ '&tr=' + metadata[b'announce'].decode()+ '&xl=' + str(metadata[b'info'][b'length'])
+    '''torrent = open(file, 'r').read()
+    metadata = bcoding.bdecode(torrent)
+    hashcontents = bcoding.bencode(metadata['info'])
+    digest = hashlib.sha1(hashcontents).digest()
+    b32hash = base64.b32encode(digest)
+    params = {'xt': 'urn:btih:%s' % b32hash,\
+              'dn': metadata['info']['name'],\
+              'tr': metadata['announce'],\
+              'xl': metadata['info']['length']}
+    paramstr = urllib.urlencode(params)
+    magneturi = 'magnet:?%s' % paramstr
+    return magneturi'''
 
 
-# In[ ]:
+# In[35]:
+
+
+def verify_cb(conn, cert, errnum, depth, ok):
+    certsubject = crypto.X509Name(cert.get_subject())
+    commonname = certsubject.commonName
+    print('Got certificate: ' + commonname)
+    return ok
+
+
+# In[48]:
 
 
 date_check=countDate()
 unique_cb=unique_callback()
+client_send_download_commands=ClientSSL(os.curdir,'client.pkey','client.cert','CA.cert')
 
 while True:
     raw=request_getter()
@@ -267,18 +271,20 @@ while True:
                     file_name=a.get('message').get('document')['file_name']
                     torrent_buttons=[{"text":"Download","callback_data":"Download Torrent"}]
                     endswithdownload(file_id,file_name,file_ext)
-                    send_message_buttons("Do you want to download torrent "+file_name+"?",a.get("message").get('chat')['id'],torrent_buttons)
+                    send_message_buttons("Do you want to download torrent "+file_name+" ?",a.get("message").get('chat')['id'],torrent_buttons)
                 except Exception as e:
                     pprint.PrettyPrinter(indent=1).pprint(r.json())
                 try:
                     query=a.get('callback_query')['id']
                     if(query!=unique_cb.id):
+                        pprint.PrettyPrinter(indent=1).pprint(a.get('callback_query'))
                         unique_cb(query)
                         query_result=a.get('callback_query')['data']
+                        query_from=a.get('callback_query').get('from')['id']
                         if(query_result=="Download Torrent"):
-                            send_message("Download message received",a.get("callback_query").get("from")['id'])
-                            
-                    #put function here in order to call downloads
+                            stringTorrents=a.get('callback_query').get('message')['text'].split(" ")
+                            print(stringTorrents)
+                            #put function here in order to call downloads
                 except Exception as e:
                     print("No callback query found")
                     
@@ -300,4 +306,54 @@ while True:
                         
     else:
         thread.sleep(3000)
+
+
+# In[45]:
+
+
+class ClientSSL:
+    def __init__(self,dir_self,client_key,client_cert,ca_cert):
+        self.dir=self.set_dir(dir_self)
+        self.ctx=SSL.Context(SSL.SSLv23_METHOD)
+        self.ctx.set_options(SSL.OP_NO_SSLv2)
+        self.ctx.set_options(SSL.OP_NO_SSLv3)
+        self.ctx.set_verify(SSL.VERIFY_PEER, verify_cb)  # Demand a certificate
+        #self.ctx.use_privatekey_file(os.path.join(dir, 'client.pkey'))
+        #self.ctx.use_certificate_file(os.path.join(dir, 'client.cert'))
+        #self.ctx.load_verify_locations(os.path.join(dir, 'CA.cert'))
+        self.ctx.use_privatekey_file(os.path.join(self.dir, client_key))
+        self.ctx.use_certificate_file(os.path.join(self.dir,client_cert))
+        self.ctx.load_verify_locations(os.path.join(self.dir,ca_cert))
+        self.sock = SSL.Connection(self.ctx, socket.socket(socket.AF_INET, socket.SOCK_STREAM))
+    def send(self,host,port,message):
+        #ensure this part in later stages that 127.0.0.1 or localhost must be banned
+        self.sock.connect(host,port)
+        """while 1:
+            line = sys.stdin.readline()
+            if line == '':
+                break
+            try:
+                self.sock.send(line)
+                sys.stdout.write(sock.recv(1024).decode('utf-8'))
+                sys.stdout.flush()
+            except SSL.Error:
+                print('Connection died unexpectedly')
+                break
+        self.sock.shutdown()
+        self.sock.close()"""
+        count=0
+        while (count!=5):
+            try:
+                self.sock.send(message)
+                sys.stdout.write(sock.recv(1024).decode('utf-8'))
+                sys.stdout.flush()
+                break
+            except SSL.Error:
+                print('Connection died unexpectedly, retrying')
+                count+=1
+                continue
+        self.sock.shutdown()
+        self.sock.close()
+    def set_dir(self,dir):
+        return dir
 
