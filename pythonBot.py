@@ -1,7 +1,7 @@
 
 # coding: utf-8
 
-# In[32]:
+# In[12]:
 
 
 import requests
@@ -18,24 +18,23 @@ import sys
 from OpenSSL import SSL, crypto
 import bcoding, hashlib,urllib
 import io
-import delugeBot
+from delugeBot import DelugeConnect as deluge_connect
+from Crypto.Cipher import AES
 
 
-# In[17]:
-
-
-dir(bcoding)
-
-
-# In[28]:
+# In[58]:
 
 
 api_link="https://api.telegram.org/"
-bot_api="bot578074631:AAFcRCDPl8mzfS0AJ_zwn571cKyC4aCycZ0"
-reload(sys)
+bot_api=""
+with open("botapi.txt","r") as f:
+    b=f.read()
+    obj2=AES.new('This is a key123', AES.MODE_CFB, 'This is an IV456')
+    bot_api=obj2.decrypt(b)
+print(bot_api)
 
 
-# In[3]:
+# In[49]:
 
 
 def call_json(link,method,params={}):
