@@ -1,7 +1,7 @@
 
 # coding: utf-8
 
-# In[39]:
+# In[1]:
 
 
 import requests
@@ -9,10 +9,11 @@ import wget
 import base64
 import time
 import pprint
-import json
+import json, ast
 import delugeBot
 import os
 import socket
+from IPy import IP
 
 
 # In[2]:
@@ -46,7 +47,7 @@ def countDate():
     return func
 
 
-# In[ ]:
+# In[5]:
 
 
 def unique_group_id():
@@ -57,7 +58,7 @@ def unique_group_id():
     return func
 
 
-# In[5]:
+# In[6]:
 
 
 def unique_callback():
@@ -68,7 +69,7 @@ def unique_callback():
     return func
 
 
-# In[6]:
+# In[7]:
 
 
 def download(link):
@@ -76,7 +77,7 @@ def download(link):
     wget.download(''.join(command))
 
 
-# In[38]:
+# In[8]:
 
 
 class ipList:
@@ -134,7 +135,39 @@ class ipList:
 class_list=ipList("saved_user_lists")
 
 
-# In[7]:
+# In[9]:
+
+
+def encode_dict(dic, encoding='utf-8'):
+    new_dict={}
+
+    for key, value in dic.items():
+
+        new_key=key.encode(encoding)
+
+        if isinstance(value, list):
+            new_dict[new_key]=[]
+            for item in value:
+                if isinstance(item, unicode):
+                    new_dict[new_key].append(item.encode(encoding))
+
+                elif isinstance(item, dict):
+
+                    new_dict[new_key].append(decode_dict(item))
+
+                else:
+                    new_dict[new_key].append(item)
+
+        elif isinstance(value, unicode):
+            new_dict[new_key]=value.encode(encoding)
+
+        elif isinstance(value, dict):
+            new_dict[new_key]=decode_dict(value)
+
+    return new_dict
+
+
+# In[10]:
 
 
 def request_getter():
@@ -145,7 +178,73 @@ def request_getter():
     return func
 
 
+# In[11]:
+
+
+def endswithdownload(file_id,name_file,array_of_item):
+    print(name_file.split(".")[-1])
+    if(name_file.split(".")[-1] in array_of_item):
+        json_request=call_json(api_link+bot_api,"getFile",{"file_id":file_id})
+        download(json_request.get('result')['file_path'])
+    else:
+        print("Not determined file")
+
+
+# In[12]:
+
+
+#figure out how to send a message in python with inlines
+
+
+# In[13]:
+
+
+id_group=-254621867
+
+def send_message(text,group_id):
+    params={"chat_id":str(group_id),"text":str(text)}
+    json=call_json(api_link+bot_api,"sendMessage",params)
+    
+send_message("Rob",id_group)
+
+
 # In[14]:
+
+
+keyboard_button=[]
+
+keyboard_button.append({"text":"A","url":"https://www.reddit.com/r/awwnime/"})
+keyboard_button.append({"text":"Send back data","callback_data":"Avugu"})
+
+def send_message_buttons(text,group_id,query_buttons):
+    object=json.dumps({"inline_keyboard":[query_buttons]})
+    params={"chat_id":str(group_id),"text":str(text),"reply_markup":object}
+    jsona=call_json(api_link+bot_api,"sendMessage",params)
+    print(jsona)
+
+
+# In[15]:
+
+
+def download_torrent(file_name,group_id_download):
+    keyboard_buttons=[{"text":"Download Torrent","callback_data":"Start Torrent Download"}]
+    send_message_buttons("Do you want to download torrent "+file_name+" ?",group_id_download,json.dumps({"inline_keyboard":[keyboard_buttons]}))
+    returned_get_result=call_json(api_link+bot_api,"sendMessage",params)
+
+
+# In[16]:
+
+
+def make_magnet_from_file(file) :
+    metadata = bencodepy.decode_from_file(file)
+    subj = metadata[b'info']
+    hashcontents = bencodepy.encode(subj)
+    digest = hashlib.sha1(hashcontents).digest()
+    b32hash = base64.b32encode(digest).decode()
+    return 'magnet:?'             + 'xt=urn:btih:' + b32hash             + '&dn=' + metadata[b'info'][b'name'].decode()             + '&tr=' + metadata[b'announce'].decode()+ '&xl=' + str(metadata[b'info'][b'length'])
+
+
+# In[ ]:
 
 
 date_check=countDate()
@@ -155,11 +254,11 @@ while True:
     raw=request_getter()
     r=raw.r
     if(r.status_code==200):
-        #pprint.PrettyPrinter(indent=3).pprint(r.json())
-        for a in r.json()['result']:
-            if(a['update_id']>date_check.date_var):
+        
+        for a in r.json()[u'result']:
+            if(int(a['update_id'])>int(date_check.date_var)):
                 pprint.PrettyPrinter(indent=1).pprint(a.get('message'))
-                date_check(a['update_id'])
+                date_check(int(a['update_id']))
                 raw(str(a['update_id']))
                 try:
                     file_ext=['torrent']
@@ -181,95 +280,24 @@ while True:
                             
                     #put function here in order to call downloads
                 except Exception as e:
-                    pprint.PrettyPrinter(indent=1).pprint(r.json())
+                    print("No callback query found")
                     
                 try:
-                    String[] split=a[text].split("\\s")
+                    split=a.get('message')['text'].encode("utf-8").split(" ")
+                    print("Split file is "+str(split))
                     if(split[0]=="/register"):
-                        username_ip_parsed=[a.get('from')['id'],split[1]]
-                        if(verify_ip_address(split[1])):
-                            class_list.insert_to_list(username_ip_parsed)
+                        username_ip_parsed=[a.get('message').get('from')['id'],split[1]]
+                        class_list.delete_from_list(username_ip_parsed[0])
+                        class_list.insert_to_list(username_ip_parsed)
+                        send_message("If you enter an invalid ip, it may not work. You may re-register your ip on further iterations.",a.get('message').get('chat')['id'])
+                        print(class_list.return_list())
+                except Exception as e:
+                    print(e)
+                    print("No register.")
                             
                             
                         
                         
     else:
         thread.sleep(3000)
-
-
-# In[8]:
-
-
-def endswithdownload(file_id,name_file,array_of_item):
-    print(name_file.split(".")[-1])
-    if(name_file.split(".")[-1] in array_of_item):
-        json_request=call_json(api_link+bot_api,"getFile",{"file_id":file_id})
-        download(json_request.get('result')['file_path'])
-    else:
-        print("Not determined file")
-
-
-# In[9]:
-
-
-#figure out how to send a message in python with inlines
-
-
-# In[10]:
-
-
-id_group=-254621867
-
-def send_message(text,group_id):
-    params={"chat_id":str(group_id),"text":str(text)}
-    json=call_json(api_link+bot_api,"sendMessage",params)
-    
-send_message("Rob",id_group)
-
-
-# In[11]:
-
-
-keyboard_button=[]
-
-keyboard_button.append({"text":"A","url":"https://www.reddit.com/r/awwnime/"})
-keyboard_button.append({"text":"Send back data","callback_data":"Avugu"})
-
-def send_message_buttons(text,group_id,query_buttons):
-    object=json.dumps({"inline_keyboard":[query_buttons]})
-    params={"chat_id":str(group_id),"text":str(text),"reply_markup":object}
-    jsona=call_json(api_link+bot_api,"sendMessage",params)
-    print(jsona)
-
-
-# In[12]:
-
-
-def download_torrent(file_name,group_id_download):
-    keyboard_buttons=[{"text":"Download Torrent","callback_data":"Start Torrent Download"}]
-    send_message_buttons("Do you want to download torrent "+file_name+" ?",group_id_download,json.dumps({"inline_keyboard":[keyboard_buttons]}))
-    returned_get_result=call_json(api_link+bot_api,"sendMessage",params)
-
-
-# In[13]:
-
-
-def make_magnet_from_file(file) :
-    metadata = bencodepy.decode_from_file(file)
-    subj = metadata[b'info']
-    hashcontents = bencodepy.encode(subj)
-    digest = hashlib.sha1(hashcontents).digest()
-    b32hash = base64.b32encode(digest).decode()
-    return 'magnet:?'             + 'xt=urn:btih:' + b32hash             + '&dn=' + metadata[b'info'][b'name'].decode()             + '&tr=' + metadata[b'announce'].decode()+ '&xl=' + str(metadata[b'info'][b'length'])
-
-
-# In[40]:
-
-
-def verify_ip_address(ip_address):
-    try:
-        socket.inet_aton(addr)
-        return true
-    except socket.error:
-        return false
 
