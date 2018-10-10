@@ -1,13 +1,21 @@
 
 # coding: utf-8
 
-# In[8]:
+# In[58]:
 
 
 from deluge_client import DelugeRPCClient,FailedToReconnectException
+import base64
+import pprint
 
 
-# In[97]:
+# In[59]:
+
+
+printp=pprint.PrettyPrinter(indent=1)
+
+
+# In[89]:
 
 
 class DelugeConnect:
@@ -29,29 +37,17 @@ class DelugeConnect:
         
     def add_torrent(self,filename):
         torrent=open(filename,'r').read()
+        print(torrent)
         metadata = base64.b64encode(torrent)
-        self.call_retry(self.client,'core.add_torrent_file','archlinux.torrent',metadata,{})
-        
-    def call_retry(self, method, *args, **kwargs):
-        for a in range(10):
-            try:
-                print("Adding")
-                return self.client.call(method, *args, **kwargs)
-            except FailedToReconnectException:
-                print("Fail to add")
-                time.sleep(5)
+        #self.call_retry(self.client,'core.add_torrent_file',filename,metadata,{})
+        return self.client.core.add_torrent_file(filename,metadata,{})
                 
     def get_torrent_status(self):
-        return call_retry(self.client, 'core.get_torrents_status', {}, [])
-    
-    def add_torrent_magnet(self,magnet_link):
-        try:
-            return call_retry(self.client,'core.add_torrent_magnet',magnet_link,{})
-        except Exception as e:
-            add_torrent_error="<class \'deluge_client.client.AddTorrentError\'>"
-            type_check=str(type(e))
-            if(type_check==add_torrent_error):
-                return "Torrent already exists in the machine"
+        raw_progress=self.client.core.get_torrents_status({}, ['name','progress'])
+        list_of_progress=[]
+        for a in raw_progress.items():
+            list_of_progress.append(a[1])
+        return list_of_progress
             
     def disconnect(self):
         try:
@@ -60,16 +56,14 @@ class DelugeConnect:
         except Exception as e:
             print(e)
             return "Cannot be disconnected, maybe it's already disconnected?"
+    
 
 
-# In[98]:
+# In[ ]:
 
 
-new_self=DelugeConnect('127.0.0.1',58846,'localclient','a')
-
-
-# In[99]:
-
-
-new_self.connect()
+"""for a in client_connect.get_torrent_status().items():
+    print(type(a))
+    printp.pprint(a[1]['name']+" "+str(a[1]['progress']))
+    print("break")"""
 
